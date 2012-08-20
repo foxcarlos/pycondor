@@ -1,0 +1,4 @@
+#Se ingnoran los commit de los  archivos dentro de la carpeta LOGS
+log/
+*.swp
+*.log
