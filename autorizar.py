@@ -4,7 +4,8 @@ consumer_secret = "JQUF9IFiFOpzjpTKYxsbKl5QV6o0baoD37fxFpBEE"
 auth = tweepy.OAuthHandler(consumer_key, consumer_secret)
 auth_url = auth.get_authorization_url()
 print auth_url
-verificar = auth.get_access_token(9091786)
-print "access_key = %s" %auth.acces_token.key
-print "access_secret = %s" %auth.acces_token.secret
+pin = raw_input('Ingrese el PIN:')
+auth.get_access_token(pin)
+print "access_key = '%s'" % (auth.access_token.key)
+print "access_secret = '%s'" % (auth.access_token.secret)
 
