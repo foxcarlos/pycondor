@@ -3,6 +3,7 @@
 from rutinas.varias import *
 import datetime
 import time
+import random
 
 
 #FoxCarlos
@@ -27,10 +28,23 @@ access_token = "36965560-Yk26t8CCvXxLyXgivJQBCXBfn1mPiawHYutSrU09Q"
 access_token_secret = "OyEiXmMsx3zJD6sOU31GYzx78hgLbEp9JsRv3G2I"
 
 t = tuiter(consumer_key, consumer_secret, access_token, access_token_secret)
-for veces in range(10):
-    f = datetime.datetime.now()
-    fecha = f.strftime('%d/%m/%Y %H:%M:%S')
-    mensaje = 'Hola @foxcarlos {0}'.format(fecha)
-    t.enviar(mensaje)
-    time.sleep(2)
+tiempo = 61 
+veces = 5
+frases = ['saludos Amigos , quiero la de falcao #cdrxdirectv',
+ 'Hola Quiero la de falcao #cdrxdirectv', 
+ 'Mis Panas saludos desde Venezuela please la de falcao #cdrxdirectv', 
+ 'Quiero la camiseta de falcao #cdrxdirectv', 
+ 'Quiero la camiseta del Tigre #cdrxdirectv', 
+ 'Quiero esa remera #cdrxdirectv', 'Yo creo que ya gane #cdrxdirectv', 
+ 'Me duelen los dedos de tanto escribir #cdrxdirectv', 
+ 'Voy por la Camiseta #cdrxdirectv']
 
+while True:
+    f = datetime.datetime.now()
+    fecha = f.strftime('%d/%m/%Y %H:%M')
+    aleatorio = random.choice(frases)
+    mensaje = '{0} mensaje nro{1} de hoy {2}'.format(aleatorio, veces, fecha)
+    print mensaje
+    t.enviar(mensaje)
+    time.sleep(tiempo)
+    veces = veces + 1
