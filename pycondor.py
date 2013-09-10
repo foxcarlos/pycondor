@@ -1,193 +1,255 @@
-#!/usr/bin/env python
-'''
-PyCondor es un modulo que permite vigilar una lista de uno o varios computadores
-para saber si se encuentran activos en una red lan, esto es mediante el
-comando fping de linux si no lo tienes instalado puedes hacerlo en debian o
-ubuntu con el comando  #aptitude install fping, si usas Windows tambien existe
-una descarga , probablemente lo conseguiras aqui http://fping.sourceforge.net/;
-adicional a esto tambien es capaz de verificar el porcentaje de uso en disco
-de los servidores que indiquemos que verifique, dandonos asi los alertas cuando se este alcanzando
-un limite de uso del disco.
-Para poder monitoriar el espacio en disco de un servidor remoto es necesario montarlo primero para
-que pueda ser verificado el espacio ya que esto se realiza mediante el comando df de linux, ejemplo:
-imaginemos que deseamos verificar el espacio en disco de un servidor windows que tiene un recurso
-compartido llamado '//publico/hc2/',  para este caso es necesario montar el servidor bien sea
-mediante el comando mount o directamente desde el fstab, luego de esto entonces procedemos a
-colocarlo dentro del archivo de configuracion que es el lugar donde configuraremos todos nuestros
-discos a verificar tal cual
+#! /usr/bin/env python
+# -*- coding: utf-8 -*-
 
-Estos alertas se hacen enviando emails, twitts y sms  a numeros telefonicos
+#pycondor@gmail.com
+#shc21152115
 
-pycondor@gmail.com
-shc21152115
-'''
 import subprocess
 import sys
 import os
 import ConfigParser
+import logging
+import time
+from daemon import runner
+import os
+import zmq
+import psutil
+
+class pyCondor():
+    def __init__(self):
+
+        self.nombreArchivoConf = 'pycondor.cfg'
+        self.fc = ConfigParser.ConfigParser()
+
+        #Propiedades de la Clase
+        self.archivoLog = ''
+        self.tiempo = 10
+
+        self.configInicial()
+        self.configDemonio()
+
+    def configInicial(self):
+        '''Metodo que permite extraer todos los parametros
+        del archivo de configuracion pyloro.cfg que se
+        utilizara en todo el script'''
+
+        #Para saber como se llama este archivo .py que se esta ejecutando
+        archivo = sys.argv[0]  # Obtengo el nombre de este  archivo
+        archivoSinRuta = os.path.basename(archivo)  # Elimino la Ruta en caso de tenerla
+        self.archivoActual = archivoSinRuta
+
+        #Obtiene Informacion del archivo de Configuracion .cfg
+        self.ruta_arch_conf = os.path.dirname(archivo)
+        self.archivo_configuracion = os.path.join(self.ruta_arch_conf, self.nombreArchivoConf)
+        self.fc.read(self.archivo_configuracion)
+        
+        #Obtiene el nombre del archivo .log para uso del Logging
+        seccion = 'RUTAS'
+        opcion = 'archivo_log'
+        self.archivoLog = self.fc.get(seccion, opcion)
+
+    def configDemonio(self):
+        '''Configuiracion del Demonio'''
+
+        self.stdin_path = '/dev/null'
+        self.stdout_path = '/dev/tty'
+        self.stderr_path = '/dev/tty'
+        self.pidfile_path =  '/tmp/{0}.pid'.format(self.archivoActual)
+        self.pidfile_timeout = 5
+       
+    def configLog(self):
+        '''Metodo que configura los Logs de error tanto el nombre
+        del archivo como su ubicacion asi como tambien los 
+        metodos y formato de salida'''
+        
+        #Extrae de la clase la propiedad que contiene el nombre del archivo log
+        nombreArchivoLog = self.archivoLog
+        self.logger = logging.getLogger("DemonioPyCondor")
+        self.logger.setLevel(logging.INFO)
+        formatter = logging.Formatter("%(levelname)s--> %(asctime)s - %(name)s:  %(message)s", datefmt='%d/%m/%Y %I:%M:%S %p')
+        handler = logging.FileHandler(nombreArchivoLog)
+        handler.setFormatter(formatter)
+        self.logger.addHandler(handler)
+        return handler
+
+    def enviarSocket(self, registros):
+        '''Parametros 2: (tupla, string):
+        (Registros, "String:Nombre del Campo de la Tabla que se actualizara")
+
+        Este Metodo recorre una lista de las personas que se le enviara el
+        mensaje SMS de Respuesta para luego enviarla via ip por Socket a 
+        (el o los) Servidores serverZMQ
+        NOTA: Cuando se envia al ServidorZMQ este devuelve mediante self.socket.recv()
+        ('1') si todo salio bien o ('0') en caso de fallar'''
 
 
-'''
-rut = os.path.abspath('desarrollo/python')
-sys.path.append(rut)
-from rutinas.varias import *
-'''
+        '''Algunos telefono generan error luego de enviar mas de 98 sms
+        por tal motivo solo se permitira enviar 98 SMS por cada telefono
+        Servidor que este ecuchando es decir por cada demonioServidor.py
+        que se este ejecutando, esto se sabe mirando el archivo .cfg
+        y viendo cuantos servidores aparecen en la seccion SERVER_ZQM_DEMONIOS'''
 
-sys.path.append('/home/administrador/desarrollo/python/')
-from rutinas.varias import *
+        #cantDemonioServ = len(self.fc.items('SERVER_ZQM_DEMONIOS'))
+        #totalRegEnviar = 98 * cantDemonioServ
 
+        for fila in registros:
+            numero, sms = fila
+            #mensaje = self.responder
 
-'''
-Antes de inciar la primera vez este script es necesario agregar al path de python nuestra libreria
-llamada varias.py que esta ubicada dentro del paquete rutinas, para agregar nuestra aplicacion al
-path de python se puede hacer de varias maneras, la primera y la mas sencilla es utilizando el
-metodo sys.path.append('ruta') dentro de nuestro Script Ej:
+            msg = '{0}^{1}'.format(numero, sms)
 
-import sys
-sys.path.append('/home/administrador/desarrollo/python/')
+            #Se extrae y muestra en el .log solo una parte del mensaje
+            self.logger.info(msg[:100])
+            
+            #Se enviar al servidor ZMQ para que envie el SMS
+            self.socket.send(msg)
+            
+            #Se recibe un valor que verifica si llego bien el SMS
+            # '1' si todo salio bien o '0' si no se pudo enviar el SMS
+            msg_in = self.socket.recv()
+            noEnviado, nombreServidor = msg_in.split(',')
+            if int(noEnviado):
+                #Si se logro enviar el SMS, se marca el Mensaje como Leido
+                #self.droid.smsMarkMessageRead([id], True)
+                pass
+            else:
+                self.logger.warn('Houston Tenemos un Problema con el Telefono:{0},\
+                    no se pudo enviar el SMS desde el Servidor {1}'.format(numero, nombreServidor))
 
-La otra forma de hacerlo es agregando nuestra aplicacion o script directamente al paht de python
-desde la linea de comando mediante la sentencia "export" Ej:
+    def notificar(self, msg):
+        '''
+        '''
+        listaMensajes = []
+        for personal in self.fc.items('TELEFONO'):
+            numero = personal[1]
+            mensaje = (numero, msg)
+            listaMensajes.append(mensaje)
+            #print(listaMensajes)
+            self.enviarSocket(listaMensajes)
 
-export PYTHONPATH=$PYTHONPATH:/home/administrador/desarrollo/python
+    def vigilarIP(self):
+        '''    Metodo Vigilar obtiene una lista de las direcciones IP desde el
+        archivo de configuracion el metodo vigilar recorre la lista de Servidores
+        y les hace fping para verfificar si estan disponibles, de no estarlo
+        envia un mensaje via twitter,correo  a los responsables un  asi como
+        tambien guarda el error en un log de archivo
+        '''
 
-Esto tiene como desventaja que al cerrar la sesion de usuario esta ruta se perdera y debera
-ejecutarse de nuevo cuando se inicie sesion. Si realmente deseamos que permanezca nuetro sistema
-o script siempre en el pacht de python es necesario editar o crear en la raiz de /home/ un archivo
-que esta por lo regular oculto llamado .bashrc, luego que lo editemos colocamos dentro lo siguiente:
+        for servidor in self.fc.items('SERVIDORES_ONLINE'):
+            x = ['fping', servidor[1]]
+            comando = subprocess.Popen(x, stderr=subprocess.PIPE, \
+            stdout=subprocess.PIPE)
+            salida = comando.stdout.read()
+            if salida.find('unreachable') > 0:
+                msg = '*Atencion* El Servidor %s esta Fuera de Servicio'.format(servidor[0])
+                self.notificar(msg)
 
-Ej: nano /home/.bashrc
-Copiar lo siguiente:
+    def vigilarEspacio(self):
+        '''
+        Metodo que permite obtener el espacio de los discos y unidades montadas
+        para luego reportarlo, los discos a verificar se encuentran configurados
+        en el archivo ".cfg" y para obtener el espacio dipoonible,  si por algun 
+        motivo uno de los discos que aparecen en la lista no puede ser verificado 
+        entonces tambien se envia un mensaje indicando que dicho(s) discos no se 
+        pudieron revisar
+        '''
+        
+        msg = ''
+        for disco in self.fc.items('ESPACIO_DISCO'):
+            try:
+                porcentEspacioUso= psutil.disk_usage(disco[1]).percent
+                #msg = 'El porcentaje de uso del disco del servidor {0} es:{1}'.format(disco[0], porcentEspacioUso)
+            except:
+                porcentEspacioUso = 0.0
+            
+            if porcentEspacioUso > 99:
+                msg = 'El Servidor {0} alcanzo el limite Maximo de uso en Disco {1}%'.format(disco[0], porcentEspacioUso)
+                self.notificar(msg)
+            
+            if porcentEspacioUso == 0:
+                msg = 'No se pudo monitorear el disco {0}, es probable que no este montado'.format(disco[0])
+                self.notificar(msg)
 
-export PYTHONPATH=$PYTHONPATH:/home/administrador/desarrollo/python
+    def buscarServidoresZMQ(self):
+        ''' Busca en el archivo de configuracion pyloro.cfg todos los 
+        demonios servidores y devuelve una lista'''
+        
+        seccionDemonio = 'DEMONIOS'
+        listaServidores= []
 
-Guardamos y listo ya tenemos nuetra aplicacion o script dentro de la ruta de python
-'''
-#si decides por utilizar la primera opcion descomenta la linea de abajo
-#sys.path.append('/home/administrador/desarrollo/python/')
+        if self.fc.has_section(seccionDemonio):
+            for demonios in self.fc.items(seccionDemonio):
+                seccion, archivo = demonios
+                seccionFinal = seccion.upper()
+                if self.fc.has_section(seccionFinal):
+                    listaPar = []
+                    for var, par in self.fc.items(seccionFinal):
+                        listaPar.append(par)
+                                   
+                    ip_telefono, \
+                    puerto_telefono, \
+                    puerto_adb_forward, \
+                    ip_demonio_zmq, \
+                    puerto_demonio_zmq, \
+                    serial_telefono = listaPar
+                    
+                    listaServidores.append(listaPar)
+                else:
+                    self.logger.error('No se encuentra en el archivo de configuracion la Seccion {0}'.format(seccionFinal))
+        else:
+            self.logger.error('No se cuentra en el archivo de configuracion la Seccion {0}'.format(seccionDemonio))
+        return listaServidores
 
+    def main(self):
+        ''' '''
+        self.logger.info('Proceso iniciado <Sistema de Monitoreo pyCondor>')
+        self.vigilarEspacio()
+        self.vigilarIP()
+        self.logger.info('Proceso Finalizado <Sistema de monitoreo pyCondor>')
 
-def unir_ruta_file(archivo):
-    #Toma la Ruta Actual donde se encuentra el archivo .py actual
-    ruta = os.path.abspath(os.path.dirname(sys.argv[0]))
-    ruta_archivo = os.path.join(ruta, archivo)
-    return ruta_archivo
+    def zmqConectar(self):
+        ''' Busca en el archivo de configuracion pyloro.cfg todos los 
+        demonios servidores ZMQ y los conecta'''
+        
+        self.socket = ''
+        context = zmq.Context()
+        self.socket = context.socket(zmq.REQ)
+        lista = self.buscarServidoresZMQ()
+        for server in lista:
+            ip_telefono, \
+            puerto_telefono, \
+            puerto_adb_forward, \
+            ip_demonio_zmq, \
+            puerto_demonio_zmq, \
+            serial_telefono = server
+            
+            servSock = 'tcp://{0}:{1}'.format(ip_demonio_zmq, puerto_demonio_zmq)
+            try:
+                self.socket.connect(servSock)
+                self.logger.info('Conexion Satisfactoria con el servidor {0}'.format(servSock))
+            except:
+                self.logger.error('Ocurrio un Error al momento de conectar al Socket Server {0}'.format(servSock))
+    
+    def run(self):
+        ''' Este metodo es el que permite ejecutar el hilo del demonio'''
 
+        self.zmqConectar()
 
-def configuracion(seccion):
-    contacs = unir_ruta_file("pycondor.conf")
-    ini = ConfigParser.ConfigParser()
-    ini.read(contacs)
-    regresa = ini.items(seccion)
-    return regresa
+        while True:
+            #Es necesario volver a conectar cuando se reincia el telefono
+            #Colcoar que si no logra a cpnexpn es xq prbablemente debe estarse reiniiando el telefpmnp, qie espere 2 minutos aprox
+            #antes de volver a intentarlo
+            
+            self.logger.debug("Debug message")
+            self.main()
+            time.sleep(86400)
 
+#Instancio la Clase
+app = pyCondor()
+handler = app.configLog()
+daemon_runner = runner.DaemonRunner(app)
 
-def notificar(msg):
-    '''
-    Metodo que permite enviar los mensajes al email,twitter,Log de archivo
-    y telefono.
-    Parametro Recibido:El Mensaje a Enviar
-    Uso:notificar('Hola esto es una prueba')
-    '''
+#Esto garantiza que el identificador de archivo logger no quede cerrada durante daemonization
+daemon_runner.daemon_context.files_preserve=[handler.stream]
+daemon_runner.do_action()
 
-    ruta_log = unir_ruta_file('log/condor.log')
-
-    archivo = unir_ruta_file("pycondor.conf")
-    ct_email = [ctem[1] for ctem in FileConf((archivo, 'opcion', 'consultar', 'email', '', ''))]
-    ct_twitter = [cttw[1] for cttw in FileConf((archivo, 'opcion', 'consultar', 'twitter', '', ''))]
-    ct_tlf = [telf[1] for telf in FileConf((archivo, 'opcion', 'consultar', 'telefono', '', ''))]
-    fc = FileConfig(archivo)
-
-    #enviar un log a un archivo ubicado en /pycondor/log/condor.log
-    enviar_log(msg, ruta_log)
-
-    #Buscar en el archivo .conf si esta activa la opcion NOTIFICAR=SI
-    #Si la opcion esta activa proceder a notificar a todos los contactos
-    env_msg = [telf[1] for telf in FileConf((archivo, 'opcion', 'consultar', 'notificar', '', ''))]
-    if env_msg[0].upper() == 'SI':
-        #enviar un mensaje por contacto de twitter
-        for ct_t in ct_twitter:
-            msg2 = ct_t + msg
-            twitter_enviar('pycondor', msg2[0:140])
-
-        #enviar un mensaje por contacto de email
-        for ct_e in ct_email:
-            enviar_email(ct_e, msg)
-
-        #enviar un mensaje por contacto telefonico
-        lista_telf = fc.opcion_consultar('SMS')
-        sms = Sms()
-        for cttf in ct_tlf:
-            sms.enviar_mejorado(lista_telf, cttf, msg)
-
-
-def vigilar_ip():
-    '''    Metodo Vigilar obtiene una lista de las direcciones IP desde el Metodo
-    obtener_config() ubicado en el paquete rutinas.varias que se importa al
-    inicar la aplciacion, el metodo vigilar recorre la lista de Servidores
-    y les hace fping para verfificar si estan disponibles, de no estarlo
-    envia un mensaje via twitter,correo  a los responsables un  asi como
-    tambien guarda el error en un log de archivo
-    '''
-    ruta_log = unir_ruta_file('log/condor.log')
-    enviar_log('Iniciado vigilar_ip()', ruta_log)
-    archivo = unir_ruta_file("pycondor.conf")
-    lista_servidores = FileConf((archivo, 'opcion', 'consultar', 'SERVIDORES_ONLINE', '', ''))
-    for servidor in lista_servidores:
-        x = ['fping', servidor[1]]
-        comando = subprocess.Popen(x, stderr=subprocess.PIPE, \
-        stdout=subprocess.PIPE)
-        salida = comando.stdout.read()
-        if salida.find('unreachable') > 0:
-            msg = ' %s *Atencion* El Servidor %s esta Fuera de Servicio' % \
-            (str_fechahora(), servidor[0])
-            print msg
-            notificar(msg)
-
-
-def vigilar_espacio():
-    '''
-    Metodo que permite obtener el espacio de los discos y unidades montadas
-    para luego reportarlo, los discos a verificar se encuentran configurados
-    en el archivo "cfg_diskspace.py" y para obtener el espacio dipoonible
-    se llama al metodo "espacio_discos" que se encuentra en el paquete
-    "rutinas.varias" , si por algun motivo uno de los discos que aparecen
-    en la lista no puede ser verificado entonces tambien se envia un mensaje
-    indicando que dicho(s) discos no se pudieron revisar
-    '''
-
-    ruta_log = unir_ruta_file('log/condor.log')
-    enviar_log('Iniciado vigilar_espacio()', ruta_log)
-    archivo = unir_ruta_file("pycondor.conf")
-    discos_en_config = [disco[1] \
-    for disco in FileConf((archivo, 'opcion', 'consultar', 'ESPACIO_DISCO', '', ''))]
-    lista_espacio = espacio_disco()
-    config_solo_nombre = []
-    montados_solo_nombre = []
-
-    for lista_disco in discos_en_config:
-        config_solo_nombre.append(lista_disco)
-        for discos_montados in lista_espacio:
-            if len(discos_montados) > 0:
-                montados_solo_nombre.append(discos_montados[0])
-                if lista_disco == discos_montados[0]:
-                    if float(discos_montados[4].replace('%', '')) >= 99:
-                        msg = ' %s El Servidor %s alcanzo el limite Maximo de uso en Disco %s ' \
-                        % (str_fechahora(), discos_montados[0], discos_montados[4])
-                        notificar(msg)
-
-    #Verificar si esta montado el disco o servidor y emitir alerta
-    for disco_en_config in config_solo_nombre:
-        if disco_en_config not in montados_solo_nombre:
-            msg = ' %s Error no se pudo monitorear el disco (%s) es probable que no este montado \
-            por tal motivo no se podran verificar' % (str_fechahora(), disco_en_config)
-            notificar(msg)
-
-
-if __name__ == '__main__':
-    ruta_log = unir_ruta_file('log/condor.log')
-    enviar_log('############ Proceso Iniciado ############', ruta_log)
-    vigilar_ip()
-    vigilar_espacio()
-    #comando_remoto()
-    enviar_log('############ Proceso Terminado ############', ruta_log)
