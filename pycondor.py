@@ -17,16 +17,23 @@ import psutil
 
 class pyCondor():
     def __init__(self):
-
-        self.nombreArchivoConf = 'pycondor.cfg'
-        self.fc = ConfigParser.ConfigParser()
-
         #Propiedades de la Clase
         self.archivoLog = ''
         self.tiempo = 10
 
+        self.archivoCfg()
         self.configInicial()
         self.configDemonio()
+
+    def archivoCfg(self):
+        '''Inicializa y Obtiene Informacion del archivo de Configuracion .cfg'''
+
+        self.nombreArchivoConf = 'pycondor.cfg'
+        self.fc = ConfigParser.SafeConfigParser()
+        
+        self.ruta_arch_conf = os.path.dirname(sys.argv[0])
+        self.archivo_configuracion = os.path.join(self.ruta_arch_conf, self.nombreArchivoConf)
+        self.fc.read(self.archivo_configuracion)
 
     def configInicial(self):
         '''Metodo que permite extraer todos los parametros
@@ -37,11 +44,6 @@ class pyCondor():
         archivo = sys.argv[0]  # Obtengo el nombre de este  archivo
         archivoSinRuta = os.path.basename(archivo)  # Elimino la Ruta en caso de tenerla
         self.archivoActual = archivoSinRuta
-
-        #Obtiene Informacion del archivo de Configuracion .cfg
-        self.ruta_arch_conf = os.path.dirname(archivo)
-        self.archivo_configuracion = os.path.join(self.ruta_arch_conf, self.nombreArchivoConf)
-        self.fc.read(self.archivo_configuracion)
         
         #Obtiene el nombre del archivo .log para uso del Logging
         seccion = 'RUTAS'
@@ -116,6 +118,14 @@ class pyCondor():
                 self.logger.warn('Houston Tenemos un Problema con el Telefono:{0},\
                     no se pudo enviar el SMS desde el Servidor {1}'.format(numero, nombreServidor))
 
+    def guardarConfiguracion(self):
+        ''' Metodo que permite guadar los cambios que se le hacen al
+        archivo de configuracion .cfg'''
+
+        file = open(self.nombreArchivoConf, 'w')
+        self.fc.write(file)
+        file.close()
+
     def notificar(self, msg):
         '''
         '''
@@ -141,14 +151,18 @@ class pyCondor():
             stdout=subprocess.PIPE)
             salida = comando.stdout.read()
             if salida.find('unreachable') > 0:
-                if self.fc.get('NOTIFICADO', servidor[0]).upper() == 'SI':
+                if self.fc.get('NOTIFICAR', servidor[0]).upper() == 'SI':
                     msg = '*Atencion* El Servidor %s esta Fuera de Servicio'.format(servidor[0])
                     #Cambiar .cfg a no
+                    self.fc.set('NOTIFICAR', servidor[0], 'no')
+                    self.guadarConfiguracion()
                     self.notificar(msg)
             else:
-                if self.fc.get('NOTIFICADO', servidor[0]).upper() == 'NO':
-                    msg = '*Felicidades* El Servidor %s esta en Servicio nuevamente'.format(servidor[0])
+                if self.fc.get('NOTIFICAR', servidor[0]).upper() == 'NO':
+                    msg = '*En hora buena* El Servidor %s esta en Servicio nuevamente'.format(servidor[0])
                     #Cambiar .cfg a si
+                    self.fc.set('NOTIFICAR', servidor[0], 'si')
+                    self.guadarConfiguracion()
                     self.notificar(msg)
 
     def vigilarEspacio(self):
@@ -169,13 +183,33 @@ class pyCondor():
             except:
                 porcentEspacioUso = 0.0
             
-            if porcentEspacioUso > 99:
-                msg = 'El Servidor {0} alcanzo el limite Maximo de uso en Disco {1}%'.format(disco[0], porcentEspacioUso)
-                self.notificar(msg)
-            
+            if porcentEspacioUso >= 99:
+                if self.fc.get('NOTIFICAR', disco[0]).upper() == 'SI':
+                    msg = '*Atencion* El Servidor {0} alcanzo el limite Maximo de uso en Disco {1}%'.format(disco[0], 
+                            porcentEspacioUso)
+                    self.fc.set('NOTIFICAR', disco[0], 'no')
+                    self.guadarConfiguracion()
+                    self.notificar(msg)
+            else:
+                if self.get('NOTIFICAR', disco[0]).upper() == 'NO':
+                    msg = '*En hora buena* El Servidor {0} ya tiene capacidad aceptable de uso en Disco {1}%'.format(disco[0], 
+                            porcentEspacioUso)
+                    self.fc.set('NOTIFICAR', disco[0], 'si')
+                    self.guadarConfiguracion()
+                    self.notificar(msg)
+
             if porcentEspacioUso == 0:
-                msg = 'No se pudo monitorear el disco {0}, es probable que no este montado'.format(disco[0])
-                self.notificar(msg)
+                if self.fc.get('NOTIFICAR', disco[0]).upper() == 'SI':
+                    msg = '*Atencion* No se pudo monitorear el disco {0}, es probable que no este montado'.format(disco[0])
+                    self.fc.set('NOTIFICAR', disco[0], 'no')
+                    self.guadarConfiguracion()
+                    self.notificar(msg)
+            else:
+                if self.fc.get('NOTIFICAR', disco[0]).upper() == 'NO':
+                    msg = '*En Hora buena* Ya se pudo monitorear el disco {0}'.format(disco[0])
+                    self.fc.set('NOTIFICAR', disco[0], 'si')
+                    self.guadarConfiguracion()
+                    self.notificar(msg)
 
     def buscarServidoresZMQ(self):
         ''' Busca en el archivo de configuracion pyloro.cfg todos los 
@@ -210,6 +244,7 @@ class pyCondor():
     def main(self):
         ''' '''
         self.logger.info('Proceso iniciado <Sistema de Monitoreo pyCondor>')
+        self.archivoCfg()
         self.vigilarEspacio()
         self.vigilarIP()
         self.logger.info('Proceso Finalizado <Sistema de monitoreo pyCondor>')
