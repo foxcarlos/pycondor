@@ -141,8 +141,15 @@ class pyCondor():
             stdout=subprocess.PIPE)
             salida = comando.stdout.read()
             if salida.find('unreachable') > 0:
-                msg = '*Atencion* El Servidor %s esta Fuera de Servicio'.format(servidor[0])
-                self.notificar(msg)
+                if self.fc.get('NOTIFICADO', servidor[0]).upper() == 'SI':
+                    msg = '*Atencion* El Servidor %s esta Fuera de Servicio'.format(servidor[0])
+                    #Cambiar .cfg a no
+                    self.notificar(msg)
+            else:
+                if self.fc.get('NOTIFICADO', servidor[0]).upper() == 'NO':
+                    msg = '*Felicidades* El Servidor %s esta en Servicio nuevamente'.format(servidor[0])
+                    #Cambiar .cfg a si
+                    self.notificar(msg)
 
     def vigilarEspacio(self):
         '''
