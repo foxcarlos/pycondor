@@ -29,7 +29,7 @@ class pyCondor():
         '''Inicializa y Obtiene Informacion del archivo de Configuracion .cfg'''
 
         self.nombreArchivoConf = 'pycondor.cfg'
-        self.fc = ConfigParser.SafeConfigParser()
+        self.fc = ConfigParser.ConfigParser()
         
         self.ruta_arch_conf = os.path.dirname(sys.argv[0])
         self.archivo_configuracion = os.path.join(self.ruta_arch_conf, self.nombreArchivoConf)
@@ -76,28 +76,16 @@ class pyCondor():
 
     def enviarSocket(self, registros):
         '''Parametros 2: (tupla, string):
-        (Registros, "String:Nombre del Campo de la Tabla que se actualizara")
-
+        (Registros, 'String:Nombre del Campo de la Tabla que se actualizara')
         Este Metodo recorre una lista de las personas que se le enviara el
         mensaje SMS de Respuesta para luego enviarla via ip por Socket a 
         (el o los) Servidores serverZMQ
         NOTA: Cuando se envia al ServidorZMQ este devuelve mediante self.socket.recv()
-        ('1') si todo salio bien o ('0') en caso de fallar'''
-
-
-        '''Algunos telefono generan error luego de enviar mas de 98 sms
-        por tal motivo solo se permitira enviar 98 SMS por cada telefono
-        Servidor que este ecuchando es decir por cada demonioServidor.py
-        que se este ejecutando, esto se sabe mirando el archivo .cfg
-        y viendo cuantos servidores aparecen en la seccion SERVER_ZQM_DEMONIOS'''
-
-        #cantDemonioServ = len(self.fc.items('SERVER_ZQM_DEMONIOS'))
-        #totalRegEnviar = 98 * cantDemonioServ
+        ('1') si todo salio bien o ('0') en caso de fallar.'''
 
         for fila in registros:
             numero, sms = fila
             #mensaje = self.responder
-
             msg = '{0}^{1}'.format(numero, sms)
 
             #Se extrae y muestra en el .log solo una parte del mensaje
@@ -110,21 +98,10 @@ class pyCondor():
             # '1' si todo salio bien o '0' si no se pudo enviar el SMS
             msg_in = self.socket.recv()
             noEnviado, nombreServidor = msg_in.split(',')
-            if int(noEnviado):
-                #Si se logro enviar el SMS, se marca el Mensaje como Leido
-                #self.droid.smsMarkMessageRead([id], True)
-                pass
-            else:
-                self.logger.warn('Houston Tenemos un Problema con el Telefono:{0},\
-                    no se pudo enviar el SMS desde el Servidor {1}'.format(numero, nombreServidor))
-
-    def guardarConfiguracion(self):
-        ''' Metodo que permite guadar los cambios que se le hacen al
-        archivo de configuracion .cfg'''
-
-        file = open(self.nombreArchivoConf, 'w')
-        self.fc.write(file)
-        file.close()
+            if not int(noEnviado):
+                msg = '''Houston Tenemos un Problema con el Telefono:{0}, 
+                no se pudo enviar el SMS desde el Servidor {1}'''.format(numero, nombreServidor)
+                self.logger.warn(msg)
 
     def notificar(self, msg):
         '''
@@ -134,8 +111,22 @@ class pyCondor():
             numero = personal[1]
             mensaje = (numero, msg)
             listaMensajes.append(mensaje)
-            #print(listaMensajes)
-            self.enviarSocket(listaMensajes)
+            print(listaMensajes)
+            self.logger.error(listaMensajes)
+            #self.enviarSocket(listaMensajes)
+    
+    def guardarCfg(self):
+        ''' Metodo que permite guadar los cambios que se le hacen al
+        archivo de configuracion .cfg'''
+        
+        print('Entro  GuardarCfg, ahora se procede a abrir {0}'.format(self.nombreArchivoConf))
+        time.sleep(48600)
+        file = open(self.nombreArchivoConf, 'wb')
+        print('Ya se Abrio el archivo y ahora se ejecutara el write')
+        self.fc.write(file)
+        print('Se Escribio, ahora e ejecutara el close')
+        file.close()
+        print('terminado')
 
     def vigilarIP(self):
         '''    Metodo Vigilar obtiene una lista de las direcciones IP desde el
@@ -144,6 +135,8 @@ class pyCondor():
         envia un mensaje via twitter,correo  a los responsables un  asi como
         tambien guarda el error en un log de archivo
         '''
+        #self.fc = ConfigParser.SafeConfigParser()
+        self.fc.read(self.archivo_configuracion)
 
         for servidor in self.fc.items('SERVIDORES_ONLINE'):
             x = ['fping', servidor[1]]
@@ -155,14 +148,14 @@ class pyCondor():
                     msg = '*Atencion* El Servidor %s esta Fuera de Servicio'.format(servidor[0])
                     #Cambiar .cfg a no
                     self.fc.set('NOTIFICAR', servidor[0], 'no')
-                    self.guadarConfiguracion()
+                    self.guardarCfg()
                     self.notificar(msg)
             else:
                 if self.fc.get('NOTIFICAR', servidor[0]).upper() == 'NO':
                     msg = '*En hora buena* El Servidor %s esta en Servicio nuevamente'.format(servidor[0])
                     #Cambiar .cfg a si
                     self.fc.set('NOTIFICAR', servidor[0], 'si')
-                    self.guadarConfiguracion()
+                    self.guardarCfg()
                     self.notificar(msg)
 
     def vigilarEspacio(self):
@@ -174,41 +167,52 @@ class pyCondor():
         entonces tambien se envia un mensaje indicando que dicho(s) discos no se 
         pudieron revisar
         '''
-        
+        #self.fc = ConfigParser.SafeConfigParser()
+        self.fc.read(self.archivo_configuracion)
+
         msg = ''
         for disco in self.fc.items('ESPACIO_DISCO'):
-            try:
-                porcentEspacioUso= psutil.disk_usage(disco[1]).percent
-                #msg = 'El porcentaje de uso del disco del servidor {0} es:{1}'.format(disco[0], porcentEspacioUso)
-            except:
-                porcentEspacioUso = 0.0
+            print(disco)
+            ver = subprocess.Popen(['ls', disco[1]], 
+                    stderr=subprocess.PIPE, 
+                    stdout=subprocess.PIPE)
             
+            #Se le hace un ls al directorio a ver si esta montado y tiene archivos
+            #Si no esta vacio entonces se ejecuta psutil
+            if ver.stdout.read():
+                try:
+                    porcentEspacioUso= psutil.disk_usage(disco[1]).percent
+                except:
+                    porcentEspacioUso = 0.0
+            else:
+                porcentEspacioUso = 0.0
+                            
             if porcentEspacioUso >= 99:
                 if self.fc.get('NOTIFICAR', disco[0]).upper() == 'SI':
                     msg = '*Atencion* El Servidor {0} alcanzo el limite Maximo de uso en Disco {1}%'.format(disco[0], 
                             porcentEspacioUso)
                     self.fc.set('NOTIFICAR', disco[0], 'no')
-                    self.guadarConfiguracion()
+                    self.guardarCfg()
                     self.notificar(msg)
             else:
-                if self.get('NOTIFICAR', disco[0]).upper() == 'NO':
+                if self.fc.get('NOTIFICAR', disco[0]).upper() == 'NO':
                     msg = '*En hora buena* El Servidor {0} ya tiene capacidad aceptable de uso en Disco {1}%'.format(disco[0], 
                             porcentEspacioUso)
                     self.fc.set('NOTIFICAR', disco[0], 'si')
-                    self.guadarConfiguracion()
+                    self.guardarCfg()
                     self.notificar(msg)
 
             if porcentEspacioUso == 0:
                 if self.fc.get('NOTIFICAR', disco[0]).upper() == 'SI':
                     msg = '*Atencion* No se pudo monitorear el disco {0}, es probable que no este montado'.format(disco[0])
                     self.fc.set('NOTIFICAR', disco[0], 'no')
-                    self.guadarConfiguracion()
+                    self.guardarCfg()
                     self.notificar(msg)
             else:
                 if self.fc.get('NOTIFICAR', disco[0]).upper() == 'NO':
                     msg = '*En Hora buena* Ya se pudo monitorear el disco {0}'.format(disco[0])
                     self.fc.set('NOTIFICAR', disco[0], 'si')
-                    self.guadarConfiguracion()
+                    self.guardarCfg()
                     self.notificar(msg)
 
     def buscarServidoresZMQ(self):
@@ -244,9 +248,8 @@ class pyCondor():
     def main(self):
         ''' '''
         self.logger.info('Proceso iniciado <Sistema de Monitoreo pyCondor>')
-        self.archivoCfg()
         self.vigilarEspacio()
-        self.vigilarIP()
+        #self.vigilarIP()
         self.logger.info('Proceso Finalizado <Sistema de monitoreo pyCondor>')
 
     def zmqConectar(self):
