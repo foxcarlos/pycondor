@@ -112,8 +112,8 @@ class pyCondor():
             mensaje = (numero, msg)
             listaMensajes.append(mensaje)
             #print(listaMensajes)
-            self.logger.error(listaMensajes)
-            #self.enviarSocket(listaMensajes)
+        self.logger.error(listaMensajes)
+        self.enviarSocket(listaMensajes)
 
     def guardarCfg(self):
         ''' Metodo que permite guadar los cambios que se le hacen al
@@ -283,7 +283,7 @@ class pyCondor():
             
             self.logger.debug("Debug message")
             self.main()
-            time.sleep(86400)
+            time.sleep(300)
 
 #Instancio la Clase
 app = pyCondor()
