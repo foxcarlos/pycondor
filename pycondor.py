@@ -180,7 +180,7 @@ class pyCondor():
             else:
                 porcentEspacioUso = 0.0
                             
-            if porcentEspacioUso >= 99:
+            if porcentEspacioUso >= 90:
                 if self.fc.get('NOTIFICAR', disco[0]).upper() == 'SI':
                     msg = '*Atencion* El Servidor {0} alcanzo el limite Maximo de uso en Disco {1}%'.format(disco[0], 
                             porcentEspacioUso)
@@ -188,7 +188,7 @@ class pyCondor():
                     self.guardarCfg()
                     self.notificar(msg)
             
-            if porcentEspacioUso >0 and porcentEspacioUso < 99:
+            if porcentEspacioUso >0 and porcentEspacioUso < 90:
                 if self.fc.get('NOTIFICAR', disco[0]).upper() == 'NO':
                     msg = '*En hora buena* El Servidor {0} ya tiene capacidad aceptable de uso en Disco {1}%'.format(disco[0], 
                             porcentEspacioUso)
