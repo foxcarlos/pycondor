@@ -30,8 +30,8 @@ class pyCondor():
 
         self.nombreArchivoConf = 'pycondor.cfg'
         self.fc = ConfigParser.ConfigParser()
-        
-        self.ruta_arch_conf = os.path.dirname(sys.argv[0])
+
+        self.ruta_arch_conf = os.path.dirname(os.path.abspath(__file__))
         self.archivo_configuracion = os.path.join(self.ruta_arch_conf, self.nombreArchivoConf)
         self.fc.read(self.archivo_configuracion)
 
@@ -114,19 +114,14 @@ class pyCondor():
             print(listaMensajes)
             self.logger.error(listaMensajes)
             #self.enviarSocket(listaMensajes)
-    
+
     def guardarCfg(self):
         ''' Metodo que permite guadar los cambios que se le hacen al
         archivo de configuracion .cfg'''
         
-        print('Entro  GuardarCfg, ahora se procede a abrir {0}'.format(self.nombreArchivoConf))
-        time.sleep(48600)
-        file = open(self.nombreArchivoConf, 'wb')
-        print('Ya se Abrio el archivo y ahora se ejecutara el write')
-        self.fc.write(file)
-        print('Se Escribio, ahora e ejecutara el close')
-        file.close()
-        print('terminado')
+        f = open(self.archivo_configuracion, 'wb')
+        self.fc.write(f)
+        f.close()
 
     def vigilarIP(self):
         '''    Metodo Vigilar obtiene una lista de las direcciones IP desde el
@@ -135,9 +130,8 @@ class pyCondor():
         envia un mensaje via twitter,correo  a los responsables un  asi como
         tambien guarda el error en un log de archivo
         '''
-        #self.fc = ConfigParser.SafeConfigParser()
+        
         self.fc.read(self.archivo_configuracion)
-
         for servidor in self.fc.items('SERVIDORES_ONLINE'):
             x = ['fping', servidor[1]]
             comando = subprocess.Popen(x, stderr=subprocess.PIPE, \
@@ -146,14 +140,14 @@ class pyCondor():
             if salida.find('unreachable') > 0:
                 if self.fc.get('NOTIFICAR', servidor[0]).upper() == 'SI':
                     msg = '*Atencion* El Servidor %s esta Fuera de Servicio'.format(servidor[0])
-                    #Cambiar .cfg a no
+                    
                     self.fc.set('NOTIFICAR', servidor[0], 'no')
                     self.guardarCfg()
                     self.notificar(msg)
             else:
                 if self.fc.get('NOTIFICAR', servidor[0]).upper() == 'NO':
                     msg = '*En hora buena* El Servidor %s esta en Servicio nuevamente'.format(servidor[0])
-                    #Cambiar .cfg a si
+                    
                     self.fc.set('NOTIFICAR', servidor[0], 'si')
                     self.guardarCfg()
                     self.notificar(msg)
@@ -167,9 +161,8 @@ class pyCondor():
         entonces tambien se envia un mensaje indicando que dicho(s) discos no se 
         pudieron revisar
         '''
-        #self.fc = ConfigParser.SafeConfigParser()
-        self.fc.read(self.archivo_configuracion)
 
+        self.fc.read(self.archivo_configuracion)
         msg = ''
         for disco in self.fc.items('ESPACIO_DISCO'):
             print(disco)
@@ -191,7 +184,7 @@ class pyCondor():
                 if self.fc.get('NOTIFICAR', disco[0]).upper() == 'SI':
                     msg = '*Atencion* El Servidor {0} alcanzo el limite Maximo de uso en Disco {1}%'.format(disco[0], 
                             porcentEspacioUso)
-                    self.fc.set('NOTIFICAR', disco[0], 'no')
+		    self.fc.set('NOTIFICAR', disco[0], 'no')
                     self.guardarCfg()
                     self.notificar(msg)
             else:
