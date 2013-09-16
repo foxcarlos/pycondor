@@ -89,7 +89,7 @@ class pyCondor():
             msg = '{0}^{1}'.format(numero, sms)
 
             #Se extrae y muestra en el .log solo una parte del mensaje
-            self.logger.info(msg[:100])
+            #self.logger.info(msg[:100])
             
             #Se enviar al servidor ZMQ para que envie el SMS
             self.socket.send(msg)
@@ -111,7 +111,7 @@ class pyCondor():
             numero = personal[1]
             mensaje = (numero, msg)
             listaMensajes.append(mensaje)
-            print(listaMensajes)
+            #print(listaMensajes)
             self.logger.error(listaMensajes)
             #self.enviarSocket(listaMensajes)
 
@@ -139,14 +139,14 @@ class pyCondor():
             salida = comando.stdout.read()
             if salida.find('unreachable') > 0:
                 if self.fc.get('NOTIFICAR', servidor[0]).upper() == 'SI':
-                    msg = '*Atencion* El Servidor %s esta Fuera de Servicio'.format(servidor[0])
+                    msg = '*Atencion* El Servidor {0} esta Fuera de Servicio'.format(servidor[0])
                     
                     self.fc.set('NOTIFICAR', servidor[0], 'no')
                     self.guardarCfg()
                     self.notificar(msg)
             else:
                 if self.fc.get('NOTIFICAR', servidor[0]).upper() == 'NO':
-                    msg = '*En hora buena* El Servidor %s esta en Servicio nuevamente'.format(servidor[0])
+                    msg = '*En hora buena* El Servidor {0} esta en Servicio nuevamente'.format(servidor[0])
                     
                     self.fc.set('NOTIFICAR', servidor[0], 'si')
                     self.guardarCfg()
@@ -165,7 +165,7 @@ class pyCondor():
         self.fc.read(self.archivo_configuracion)
         msg = ''
         for disco in self.fc.items('ESPACIO_DISCO'):
-            print(disco)
+            #print(disco)
             ver = subprocess.Popen(['ls', disco[1]], 
                     stderr=subprocess.PIPE, 
                     stdout=subprocess.PIPE)
@@ -187,7 +187,8 @@ class pyCondor():
 		    self.fc.set('NOTIFICAR', disco[0], 'no')
                     self.guardarCfg()
                     self.notificar(msg)
-            else:
+            
+            if porcentEspacioUso >0 and porcentEspacioUso < 99:
                 if self.fc.get('NOTIFICAR', disco[0]).upper() == 'NO':
                     msg = '*En hora buena* El Servidor {0} ya tiene capacidad aceptable de uso en Disco {1}%'.format(disco[0], 
                             porcentEspacioUso)
@@ -195,18 +196,20 @@ class pyCondor():
                     self.guardarCfg()
                     self.notificar(msg)
 
-            if porcentEspacioUso == 0:
+            if porcentEspacioUso < 1:
                 if self.fc.get('NOTIFICAR', disco[0]).upper() == 'SI':
                     msg = '*Atencion* No se pudo monitorear el disco {0}, es probable que no este montado'.format(disco[0])
                     self.fc.set('NOTIFICAR', disco[0], 'no')
                     self.guardarCfg()
                     self.notificar(msg)
+
+            '''
             else:
                 if self.fc.get('NOTIFICAR', disco[0]).upper() == 'NO':
                     msg = '*En Hora buena* Ya se pudo monitorear el disco {0}'.format(disco[0])
                     self.fc.set('NOTIFICAR', disco[0], 'si')
                     self.guardarCfg()
-                    self.notificar(msg)
+                    self.notificar(msg)'''
 
     def buscarServidoresZMQ(self):
         ''' Busca en el archivo de configuracion pyloro.cfg todos los 
@@ -242,7 +245,7 @@ class pyCondor():
         ''' '''
         self.logger.info('Proceso iniciado <Sistema de Monitoreo pyCondor>')
         self.vigilarEspacio()
-        #self.vigilarIP()
+        self.vigilarIP()
         self.logger.info('Proceso Finalizado <Sistema de monitoreo pyCondor>')
 
     def zmqConectar(self):
