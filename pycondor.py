@@ -12,6 +12,7 @@ import logging
 import time
 from daemon import runner
 import os
+import datetime
 import zmq
 import psutil
 
@@ -210,6 +211,12 @@ class pyCondor():
                     self.fc.set('NOTIFICAR', disco[0], 'si')
                     self.guardarCfg()
                     self.notificar(msg)'''
+
+    def verificarArchivos(self):
+        for a in os.listdir('/media/serv_resp_noche'):
+            if os.path.splitext(a)[1] == '.zip':
+                ultimoAcceso = datetime.datetime.fromtimestamp(os.path.getmtime(a))
+                print('El Archivo {0} fue modificado por ultima vez el dia:{1}'.format(a, ultimoAcceso))
 
     def buscarServidoresZMQ(self):
         ''' Busca en el archivo de configuracion pyloro.cfg todos los 
