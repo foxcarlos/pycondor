@@ -212,11 +212,28 @@ class pyCondor():
                     self.guardarCfg()
                     self.notificar(msg)'''
 
-    def verificarArchivos(self):
+    def vigilarArchivos(self):
+        fechaHoy = datetime.date.today()
+        fechaAyer = fechaHoy - datetime.timedelta(1)
+        diaHoy = fechaHoy.day
+        nombreBuscar = 'SHC{0}NOCHE'.format(diaHoy)
+        msg = ''
+
         for a in os.listdir('/media/serv_resp_noche'):
-            if os.path.splitext(a)[1] == '.zip':
-                ultimoAcceso = datetime.datetime.fromtimestamp(os.path.getmtime(a))
-                print('El Archivo {0} fue modificado por ultima vez el dia:{1}'.format(a, ultimoAcceso))
+            nombre, extension = os.path.splitext(a)
+            if extension == '.zip':
+                if nombre == nombreBuscar:
+                    fechaArchivo = datetime.date.fromtimestamp(os.path.getmtime(a))
+                    if fechaArchivo == fechaHoy:
+                        msg = 'El respaldo "{0}" fue creado con exito'.format(nombre)
+                        break
+                    else:
+                        msg = 'El respaldo "{0}" no se realizo'.format(nombre)
+                else:
+                    msg = 'No se consiguio el nombre del archivo {0}'.format(nombreBuscar)
+        
+        print(msg)
+        #self.notificar(msg)
 
     def buscarServidoresZMQ(self):
         ''' Busca en el archivo de configuracion pyloro.cfg todos los 
