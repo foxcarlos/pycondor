@@ -211,29 +211,60 @@ class pyCondor():
                     self.fc.set('NOTIFICAR', disco[0], 'si')
                     self.guardarCfg()
                     self.notificar(msg)'''
-
+    
     def vigilarArchivos(self):
         fechaHoy = datetime.date.today()
-        fechaAyer = fechaHoy - datetime.timedelta(1)
         diaHoy = fechaHoy.day
-        nombreBuscar = 'SHC{0}NOCHE'.format(diaHoy)
+        horaHoy = datetime.datetime.today().hour
         msg = ''
-
-        for a in os.listdir('/media/serv_resp_noche'):
-            nombre, extension = os.path.splitext(a)
-            if extension == '.zip':
-                if nombre == nombreBuscar:
-                    fechaArchivo = datetime.date.fromtimestamp(os.path.getmtime(a))
-                    if fechaArchivo == fechaHoy:
-                        msg = 'El respaldo "{0}" fue creado con exito'.format(nombre)
-                        break
-                    else:
-                        msg = 'El respaldo "{0}" no se realizo'.format(nombre)
-                else:
-                    msg = 'No se consiguio el nombre del archivo {0}'.format(nombreBuscar)
         
-        print(msg)
-        #self.notificar(msg)
+        if self.fc.has_section('VIGILAR_RESPALDOS'):
+            for opcion in self.fc.items('VIGILAR_RESPALDOS'):
+                variable, valor = opcion
+                ruta, archivo, hora = valor.split(',')
+                archivoBuscar = archivo.replace('%DD%', str(diaHoy)).strip()
+                
+                if str(horaHoy).strip() == hora.strip():
+                    if archivoBuscar not in os.listdir(ruta):
+                        if self.fc.get('NOTIFICAR', variable).upper() == 'SI':
+                            msg = 'No se consiguio el Archivo, El respaldo "{0}" no se realizo'.format(archivoBuscar)
+                            self.fc.set('NOTIFICAR', variable, 'no')
+                            self.guardarCfg()
+                            self.notificar(msg)
+                    else:
+                        fechaArchivo = datetime.date.fromtimestamp(os.path.getmtime(os.path.join(ruta, archivoBuscar)))
+                        if fechaArchivo != fechaHoy:
+                            if self.fc.get('NOTIFICAR', variable).upper() == 'SI':
+                                msg = 'El respaldo "{0}" fue creado con exito'.format(archivoBuscar)
+                                self.fc.set('NOTIFICAR', variable, 'no')
+                                self.guardarCfg()
+                                self.notificar(msg)
+
+    def vigilarArchivos2(self):
+        fechaHoy = datetime.date.today()
+        diaHoy = fechaHoy.day
+        horaHoy = datetime.datetime.today().hour
+        msg = ''
+        
+        if self.fc.has_section('VIGILAR_RESPALDOS'):
+            for opcion in self.fc.items('VIGILAR_RESPALDOS'):
+                variable, valor = opcion
+                ruta, archivo, hora = valor.split(',')
+                archivoBuscar = archivo.replace('%DD%', str(diaHoy)).strip()
+                
+                if str(horaHoy).strip() == hora.strip():
+                    if archivoBuscar in os.listdir(ruta):
+                        fechaArchivo = datetime.date.fromtimestamp(os.path.getmtime(os.path.join(ruta, archivoBuscar)))
+                        if fechaArchivo == fechaHoy:
+                            msg = 'El respaldo "{0}" fue creado con exito'.format(archivoBuscar)
+                        else:
+                            msg = 'El respaldo "{0}" no se realizo'.format(archivoBuscar)
+                    else:
+                        msg = 'No se consiguio el Archivo, El respaldo "{0}" no se realizo'.format(archivoBuscar)
+                    print(msg)
+                    #self.notificar(msg)
+                else:
+                    print('No es la hora')
 
     def buscarServidoresZMQ(self):
         ''' Busca en el archivo de configuracion pyloro.cfg todos los 
@@ -270,6 +301,7 @@ class pyCondor():
         self.logger.info('Proceso iniciado <Sistema de Monitoreo pyCondor>')
         self.vigilarEspacio()
         self.vigilarIP()
+        self.vigilarArchivos()
         self.logger.info('Proceso Finalizado <Sistema de monitoreo pyCondor>')
 
     def zmqConectar(self):
