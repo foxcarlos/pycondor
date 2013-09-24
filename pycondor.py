@@ -166,7 +166,6 @@ class pyCondor():
         self.fc.read(self.archivo_configuracion)
         msg = ''
         for disco in self.fc.items('ESPACIO_DISCO'):
-            #print(disco)
             ver = subprocess.Popen(['ls', disco[1]], 
                     stderr=subprocess.PIPE, 
                     stdout=subprocess.PIPE)
@@ -204,26 +203,29 @@ class pyCondor():
                     self.guardarCfg()
                     self.notificar(msg)
 
-            '''
-            else:
-                if self.fc.get('NOTIFICAR', disco[0]).upper() == 'NO':
-                    msg = '*En Hora buena* Ya se pudo monitorear el disco {0}'.format(disco[0])
-                    self.fc.set('NOTIFICAR', disco[0], 'si')
-                    self.guardarCfg()
-                    self.notificar(msg)'''
-    
     def vigilarArchivos(self):
         fechaHoy = datetime.date.today()
-        diaHoy = fechaHoy.day
+        diaHoy = '0'+str(fechaHoy.day).strip() if len(str(fechaHoy.day).strip())<=1 else str(fechaHoy.day).strip()
+        mesHoy = '0'+str(fechaHoy.month).strip() if len(str(fechaHoy.month).strip())<=1 else str(fechaHoy.month).strip()
+        anioHoy = '0'+str(fechaHoy.year).strip() if len(str(fechaHoy.year).strip())<=1 else str(fechaHoy.year).strip()
         horaHoy = datetime.datetime.today().hour
         msg = ''
         
+        #Formato a reemplazar
+        dia = '%DD%'
+        mes = '%MM%'
+        anio = '%AA%'
+
         if self.fc.has_section('VIGILAR_RESPALDOS'):
             for opcion in self.fc.items('VIGILAR_RESPALDOS'):
                 variable, valor = opcion
                 ruta, archivo, hora = valor.split(',')
-                archivoBuscar = archivo.replace('%DD%', str(diaHoy)).strip()
                 
+                #Formato a eeempalzar 
+                archivoBuscarD = archivo.replace(dia, diaHoy).strip()
+                archivoBuscarM = archivoBuscarD.replace(mes, mesHoy).strip()
+                archivoBuscar = archivoBuscarM.replace(anio, anioHoy).strip()
+
                 if str(horaHoy).strip() == hora.strip():
                     if archivoBuscar not in os.listdir(ruta):
                         if self.fc.get('NOTIFICAR', variable).upper() == 'SI':
@@ -231,40 +233,21 @@ class pyCondor():
                             self.fc.set('NOTIFICAR', variable, 'no')
                             self.guardarCfg()
                             self.notificar(msg)
-                    else:
+
+                    if archivoBuscar in os.listdir(ruta):
                         fechaArchivo = datetime.date.fromtimestamp(os.path.getmtime(os.path.join(ruta, archivoBuscar)))
                         if fechaArchivo != fechaHoy:
                             if self.fc.get('NOTIFICAR', variable).upper() == 'SI':
-                                msg = 'El respaldo "{0}" fue creado con exito'.format(archivoBuscar)
+                                msg = 'El respaldo "{0}" NO fue creado'.format(archivoBuscar)
                                 self.fc.set('NOTIFICAR', variable, 'no')
                                 self.guardarCfg()
                                 self.notificar(msg)
 
-    def vigilarArchivos2(self):
-        fechaHoy = datetime.date.today()
-        diaHoy = fechaHoy.day
-        horaHoy = datetime.datetime.today().hour
-        msg = ''
-        
-        if self.fc.has_section('VIGILAR_RESPALDOS'):
-            for opcion in self.fc.items('VIGILAR_RESPALDOS'):
-                variable, valor = opcion
-                ruta, archivo, hora = valor.split(',')
-                archivoBuscar = archivo.replace('%DD%', str(diaHoy)).strip()
-                
-                if str(horaHoy).strip() == hora.strip():
-                    if archivoBuscar in os.listdir(ruta):
-                        fechaArchivo = datetime.date.fromtimestamp(os.path.getmtime(os.path.join(ruta, archivoBuscar)))
                         if fechaArchivo == fechaHoy:
-                            msg = 'El respaldo "{0}" fue creado con exito'.format(archivoBuscar)
-                        else:
-                            msg = 'El respaldo "{0}" no se realizo'.format(archivoBuscar)
-                    else:
-                        msg = 'No se consiguio el Archivo, El respaldo "{0}" no se realizo'.format(archivoBuscar)
-                    print(msg)
-                    #self.notificar(msg)
-                else:
-                    print('No es la hora')
+                            if self.fc.get('NOTIFICAR', variable).upper() == 'NO':
+                                self.fc.set('NOTIFICAR', variable, 'si')
+                                self.guardarCfg()
+                                self.logger.info('En Hora Buena el respaldo "{0}" fue realizado con Exito'.format(archivoBuscar))
 
     def buscarServidoresZMQ(self):
         ''' Busca en el archivo de configuracion pyloro.cfg todos los 
