@@ -112,7 +112,6 @@ class pyCondor():
             numero = personal[1]
             mensaje = (numero, msg)
             listaMensajes.append(mensaje)
-            #print(listaMensajes)
         self.logger.error(listaMensajes)
         self.enviarSocket(listaMensajes)
 
@@ -157,7 +156,8 @@ class pyCondor():
         '''
         Metodo que permite obtener el espacio de los discos y unidades montadas
         para luego reportarlo, los discos a verificar se encuentran configurados
-        en el archivo ".cfg" y para obtener el espacio dipoonible,  si por algun 
+        en el archivo ".cfg" asi como tambien el limite de espacio que se considera 
+        para emitir el alerta y para obtener el espacio dipoonible,  si por algun 
         motivo uno de los discos que aparecen en la lista no puede ser verificado 
         entonces tambien se envia un mensaje indicando que dicho(s) discos no se 
         pudieron revisar
@@ -165,8 +165,11 @@ class pyCondor():
 
         self.fc.read(self.archivo_configuracion)
         msg = ''
-        for disco in self.fc.items('ESPACIO_DISCO'):
-            ver = subprocess.Popen(['ls', disco[1]], 
+        for opciones in self.fc.items('ESPACIO_DISCO'):
+            variable, valor = opciones
+            disco, limite = valor.split(',')
+
+            ver = subprocess.Popen(['ls', disco],
                     stderr=subprocess.PIPE, 
                     stdout=subprocess.PIPE)
             
@@ -174,32 +177,32 @@ class pyCondor():
             #Si no esta vacio entonces se ejecuta psutil
             if ver.stdout.read():
                 try:
-                    porcentEspacioUso= psutil.disk_usage(disco[1]).percent
+                    porcentEspacioUso= psutil.disk_usage(disco).percent
                 except:
                     porcentEspacioUso = 0.0
             else:
                 porcentEspacioUso = 0.0
                             
-            if porcentEspacioUso >= 90:
-                if self.fc.get('NOTIFICAR', disco[0]).upper() == 'SI':
-                    msg = '*Atencion* El Servidor {0} alcanzo el limite Maximo de uso en Disco {1}%'.format(disco[0], 
-                            porcentEspacioUso)
-		    self.fc.set('NOTIFICAR', disco[0], 'no')
+            if porcentEspacioUso >= int(limite):
+                if self.fc.get('NOTIFICAR', variable).upper() == 'SI':
+                    msg = '*Atencion* El Servidor {0} alcanzo el limite Maximo {2} de uso en Disco {1}%'.format(variable, 
+                            porcentEspacioUso, limite)
+		    self.fc.set('NOTIFICAR', variable, 'no')
                     self.guardarCfg()
                     self.notificar(msg)
             
-            if porcentEspacioUso >0 and porcentEspacioUso < 90:
-                if self.fc.get('NOTIFICAR', disco[0]).upper() == 'NO':
-                    msg = '*En hora buena* El Servidor {0} ya tiene capacidad aceptable de uso en Disco {1}%'.format(disco[0], 
+            if porcentEspacioUso >0 and porcentEspacioUso < int(limite):
+                if self.fc.get('NOTIFICAR', variable).upper() == 'NO':
+                    msg = '*En hora buena* El Servidor {0} ya tiene capacidad aceptable de uso en Disco {1}%'.format(variable, 
                             porcentEspacioUso)
-                    self.fc.set('NOTIFICAR', disco[0], 'si')
+                    self.fc.set('NOTIFICAR', variable, 'si')
                     self.guardarCfg()
                     self.notificar(msg)
 
             if porcentEspacioUso < 1:
-                if self.fc.get('NOTIFICAR', disco[0]).upper() == 'SI':
-                    msg = '*Atencion* No se pudo monitorear el disco {0}, es probable que no este montado'.format(disco[0])
-                    self.fc.set('NOTIFICAR', disco[0], 'no')
+                if self.fc.get('NOTIFICAR', variable).upper() == 'SI':
+                    msg = '*Atencion* No se pudo monitorear el disco {0}, es probable que no este montado'.format(variable)
+                    self.fc.set('NOTIFICAR', variable, 'no')
                     self.guardarCfg()
                     self.notificar(msg)
 
@@ -247,7 +250,11 @@ class pyCondor():
                             if self.fc.get('NOTIFICAR', variable).upper() == 'NO':
                                 self.fc.set('NOTIFICAR', variable, 'si')
                                 self.guardarCfg()
-                                self.logger.info('En Hora Buena el respaldo "{0}" fue realizado con Exito'.format(archivoBuscar))
+                                msg = 'En Hora Buena el respaldo "{0}" fue realizado con Exito a las {1}'.format(archivoBuscar,
+                                        datetime.datetime.today().strftime('%H:%M:%S'))
+                                self.logger.info(msg)
+                                self.notificar(msg)
+
 
     def buscarServidoresZMQ(self):
         ''' Busca en el archivo de configuracion pyloro.cfg todos los 
