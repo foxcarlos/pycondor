@@ -208,9 +208,9 @@ class pyCondor():
 
     def vigilarArchivos(self):
         fechaHoy = datetime.date.today()
-        diaHoy = '0'+str(fechaHoy.day).strip() if len(str(fechaHoy.day).strip())<=1 else str(fechaHoy.day).strip()
-        mesHoy = '0'+str(fechaHoy.month).strip() if len(str(fechaHoy.month).strip())<=1 else str(fechaHoy.month).strip()
-        anioHoy = '0'+str(fechaHoy.year).strip() if len(str(fechaHoy.year).strip())<=1 else str(fechaHoy.year).strip()
+        diaHoy = str(fechaHoy.day).strip().rjust(2, '0')
+        mesHoy = str(fechaHoy.month).strip().rjust(2, '0')
+        anioHoy = str(fechaHoy.year).strip()
         horaHoy = datetime.datetime.today().hour
         msg = ''
         
@@ -287,12 +287,11 @@ class pyCondor():
         return listaServidores
 
     def main(self):
-        ''' '''
-        self.logger.info('Proceso iniciado <Sistema de Monitoreo pyCondor>')
+        '''Metodo que inicia los procesos '''
+
         self.vigilarEspacio()
         self.vigilarIP()
         self.vigilarArchivos()
-        self.logger.info('Proceso Finalizado <Sistema de monitoreo pyCondor>')
 
     def zmqConectar(self):
         ''' Busca en el archivo de configuracion pyloro.cfg todos los 
