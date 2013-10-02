@@ -3,14 +3,17 @@
 import zmq
 import os
 import sys
+import socket
 
+s = socket
 context = zmq.Context()
 socket = context.socket(zmq.REQ)
 servSock = 'tcp://{0}:{1}'.format('10.121.3.60', '5556')
 socket.connect(servSock)
 
+nombrePC = s.gethostbyname_ex(s.gethostname())
 comando = []
-envioInicial = ['10.121.3.48']
+envioInicial = [nombrePC]
 devuelve = []
 
 while True:
