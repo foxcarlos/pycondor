@@ -53,7 +53,7 @@ while True:
             print(e)
             comando = e
             devuelve = []
-            darFormatoDevuelve = ''
+            darFormatoDevuelve = e
     else:
         comando = ''
         devuelve = []
