@@ -21,7 +21,7 @@ while True:
     print('Enviando al servidor:{0}'.format(darFormatoDevuelve))
     s.send(darFormatoDevuelve)
     
-    recibido = s.recv()
+    recibido = s.recv(1024)
     print('Recibiendo desde el servidor:{0}'.format(recibido))
     
     if recibido:
