@@ -33,17 +33,12 @@ class Cliente(Thread):
             # Espera por datos
 
             peticion = self.socket.recv(1000)
+            print(peticion+'\n')
             r = raw_input('Cliente {0}:'.format(str(self.datos)))
             re = r if r else 'no hagas nada'
             self.socket.send(re)
+
              
-            # Contestacion y cierre a "adios"
-            if ("adios"==peticion):
-                print str(self.datos)+ " envia adios: contesto y desconecto"
-                self.socket.send("pues adios")
-                self.socket.close()
-                print "desconectado "+str(self.datos)
-                seguir = False
 
 if __name__ == '__main__':
    # Se prepara el servidor
@@ -59,7 +54,7 @@ if __name__ == '__main__':
       socket_cliente, datos_cliente = server.accept()
       
       # Se escribe su informacion
-      print "conectado "+str(datos_cliente)
+      #print "conectado "+str(datos_cliente)
       
       # Se crea la clase con el hilo y se arranca.
       hilo = Cliente(socket_cliente, datos_cliente)

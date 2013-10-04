@@ -14,8 +14,8 @@ devuelve = []
 
 while True:
     
-    devuelve.extend(envioInicial)
-    devuelve.extend(comando)
+    #devuelve.extend(envioInicial)
+    devuelve.append(comando)
     darFormatoDevuelve = str(devuelve)
 
     print('Enviando al servidor:{0}'.format(darFormatoDevuelve))
@@ -27,8 +27,8 @@ while True:
     if recibido:
         try:
             #print('Ejecutando el EVAL')
-            comando = eval(recibido)
-            print('comando contiene:'.format(str(comando)))
+            comando = str(eval(recibido))
+            print('comando contiene:'.format(comando))
             devuelve = []
             darFormatoDevuelve = ''
         except Exception as e:
