@@ -19,9 +19,9 @@ while True:
     darFormatoDevuelve = str(devuelve)
 
     print('Enviando al servidor:{0}'.format(darFormatoDevuelve))
-    socket.send(darFormatoDevuelve)
+    s.send(darFormatoDevuelve)
     
-    recibido = socket.recv()
+    recibido = s.recv()
     print('Recibiendo desde el servidor:{0}'.format(recibido))
     
     if recibido:
