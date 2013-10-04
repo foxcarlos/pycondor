@@ -31,11 +31,9 @@ class Cliente(Thread):
     
         while seguir:
             # Espera por datos
-            print('Esperando cliente....')
 
             peticion = self.socket.recv(1000)
-            r = raw_input('El cliente {0}  esta presente y dice:{1} , \
-                    que le quieres decir:'.format(str(self.datos), peticion))
+            r = raw_input('Cliente {0}:'.format(str(self.datos)))
             re = r if r else 'no hagas nada'
             self.socket.send(re)
              
