@@ -7,7 +7,7 @@ import socket
 s = socket.socket()
 s.connect(("10.121.3.60", 8002))
 
-nombrePC = socket.gethostbyname_ex(s.gethostname())
+nombrePC = socket.gethostbyname_ex(socket.gethostname())
 comando = []
 envioInicial = nombrePC
 devuelve = []
