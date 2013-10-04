@@ -1,11 +1,16 @@
 #!/usr/bin/pyhton/env
 
+import zmq
 import os
 import sys
 import socket
+import os
 
-s = socket.socket()
-s.connect(("10.121.3.60", 8002))
+s = socket
+context = zmq.Context()
+socket = context.socket(zmq.REQ)
+servSock = 'tcp://{0}:{1}'.format('10.121.3.60', '5556')
+socket.connect(servSock)
 
 nombrePC = s.gethostbyname_ex(s.gethostname())
 comando = []
