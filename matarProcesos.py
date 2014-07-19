@@ -3,7 +3,8 @@ import subprocess
 ruta = '/home/shc/'
 #ruta = '/home/cgarcia/'
 carpeta = raw_input('Ingrese la carpeta a Matar:')
-rutaYCarpeta = ruta+carpeta
+rutaYCarpeta = carpeta
+#rutaYCarpeta = ruta+carpeta
 
 print(rutaYCarpeta)
 x = ["lsof", "|", "grep", rutaYCarpeta]
