@@ -6,7 +6,11 @@ carpeta = raw_input('Ingrese la carpeta a Matar:')
 rutaYCarpeta = ruta+carpeta
 
 print(rutaYCarpeta)
-comando = subprocess.Popen(['lsof', '+D', rutaYCarpeta], stderr=subprocess.PIPE, stdout=subprocess.PIPE)
+x = ["lsof", "|", "grep", rutaYCarpeta]
+#x = ["lsof", "|", "grep", "Agenda"]
+#x = ['lsof', '+D', rutaYCarpeta]
+
+comando = subprocess.Popen(x, stderr=subprocess.PIPE, stdout=subprocess.PIPE)
 lista = [f for f in comando.stdout.xreadlines()]
 lista2 = [j.split() for j in lista]
 
