@@ -24,7 +24,7 @@ try:
         pid = j[1]
         if pid.isdigit():
             print('Ejecutar KILL al proceso {0} '.format(pid))
-            #comandoKill = subprocess.Popen(['kill', '-9', pid], stderr=subprocess.PIPE, stdout=subprocess.PIPE)
+            comandoKill = subprocess.Popen(['kill', '-9', pid], stderr=subprocess.PIPE, stdout=subprocess.PIPE)
         else:
             print('No es un proceso PID')
 except:
