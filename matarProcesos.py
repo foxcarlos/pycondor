@@ -13,7 +13,7 @@ print(rutaYCarpeta)
 x = "lsof | grep {0}".format(carpeta)
 
 try:
-    comando = subprocess.check_output("lsof | grep digitado", shell=True)
+    comando = subprocess.check_output(x, shell=True)
     lista2 = [f.split() for f in comando.split('\n')]
     
     #comando = subprocess.Popen(x, stderr=subprocess.PIPE, stdout=subprocess.PIPE)
