@@ -1,15 +1,15 @@
 import subprocess
 
 ruta = '/home/shc/'
-#ruta = '/home/cgarcia/'
+ruta = '/home/cgarcia/'
 carpeta = raw_input('Ingrese la carpeta a Matar:')
-rutaYCarpeta = carpeta
-#rutaYCarpeta = ruta+carpeta
+#rutaYCarpeta = carpeta
+rutaYCarpeta = ruta+carpeta
 
 print(rutaYCarpeta)
-x = ["lsof", "|", "grep", rutaYCarpeta]
+#x = ["lsof", "|", "grep", rutaYCarpeta]
 #x = ["lsof", "|", "grep", "Agenda"]
-#x = ['lsof', '+D', rutaYCarpeta]
+x = ['lsof', '+D', rutaYCarpeta]
 
 comando = subprocess.Popen(x, stderr=subprocess.PIPE, stdout=subprocess.PIPE)
 lista = [f for f in comando.stdout.xreadlines()]
