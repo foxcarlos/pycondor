@@ -1,7 +1,7 @@
 import subprocess
 
-#ruta = '/home/shc/'
-ruta = '/home/cgarcia/'
+ruta = '/home/shc/'
+#ruta = '/home/cgarcia/'
 carpeta = raw_input('Ingrese la carpeta a Matar:')
 rutaYCarpeta = ruta+carpeta
 
