@@ -1,32 +1,26 @@
 import subprocess
 
-#ruta = '/home/shc/'
-#ruta = '/home/cgarcia/'
 carpeta = raw_input('Ingrese la carpeta a Matar:')
-rutaYCarpeta = carpeta
-#rutaYCarpeta = ruta+carpeta
-
-print(rutaYCarpeta)
-#x = ["lsof", "|", "grep", rutaYCarpeta]
-#x = ["lsof", "|", "grep", "Agenda"]
-#x = ['lsof', '+D', rutaYCarpeta]
-x = "lsof | grep {0}".format(carpeta)
+comandoLinux = "lsof | grep {0}".format(carpeta)
 
 try:
-    comando = subprocess.check_output(x, shell=True)
-    lista2 = [f.split() for f in comando.split('\n')]
-    
-    #comando = subprocess.Popen(x, stderr=subprocess.PIPE, stdout=subprocess.PIPE)
-    #lista = [f for f in comando.stdout.xreadlines()]
-    #lista2 = [j.split() for j in lista]
-    
+    resultado = subprocess.check_output(comandoLinux, shell=True)
+    lista2 = [f.split() for f in resultado.split('\n')]
+
     for j in lista2:
         pid = j[1]
+        pidName = j[8]
+
         if pid.isdigit():
             print('Ejecutar KILL al proceso {0} '.format(pid))
-            comandoKill = subprocess.Popen(['kill', '-9', pid], stderr=subprocess.PIPE, stdout=subprocess.PIPE)
+            print('Nombre del Proceso {0} '.format(pidName))
+
+            try:
+                comandoKill = subprocess.Popen(['kill', '-9', pid], stderr=subprocess.PIPE, stdout=subprocess.PIPE)
+            except:
+                print('Error al Momento de realizar el kill -9 al pid:{0}'.format(pid))
         else:
-            print('No es un proceso PID')
+            print('{0} No es un proceso PID'.format(pid))
 except:
-    print('No se encontro ningun proceso con ese nombre')
+    print('No se encontro ningun proceso con ese nombre:{0}'.format(carpeta))
 
