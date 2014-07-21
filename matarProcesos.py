@@ -1,3 +1,5 @@
+#! /usr/bin/env python
+
 import subprocess
 
 carpeta = raw_input('Ingrese la carpeta a Matar:')
