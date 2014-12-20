@@ -228,11 +228,12 @@ class pyCondor():
                 archivoBuscarD = archivo.replace(dia, diaHoy).strip()
                 archivoBuscarM = archivoBuscarD.replace(mes, mesHoy).strip()
                 archivoBuscar = archivoBuscarM.replace(anio, anioHoy).strip()
+                fecha = datetime.datetime.today().strftime('%D %H:%M:%S')
 
                 if str(horaHoy).strip() == hora.strip():
                     if archivoBuscar not in os.listdir(ruta):
                         if self.fc.get('NOTIFICAR', variable).upper() == 'SI':
-                            msg = 'No se consiguio el Archivo, El respaldo "{0}" no se realizo'.format(archivoBuscar)
+                            msg = 'No se consiguio el Archivo, El respaldo "{0}" no se realizo:{1}'.format(archivoBuscar, fecha)
                             self.fc.set('NOTIFICAR', variable, 'no')
                             self.guardarCfg()
                             self.notificar(msg)
@@ -241,7 +242,7 @@ class pyCondor():
                         fechaArchivo = datetime.date.fromtimestamp(os.path.getmtime(os.path.join(ruta, archivoBuscar)))
                         if fechaArchivo != fechaHoy:
                             if self.fc.get('NOTIFICAR', variable).upper() == 'SI':
-                                msg = 'El respaldo "{0}" NO fue creado'.format(archivoBuscar)
+                                msg = 'El respaldo "{0}" NO fue creado:{1}'.format(archivoBuscar, fecha)
                                 self.fc.set('NOTIFICAR', variable, 'no')
                                 self.guardarCfg()
                                 self.notificar(msg)
